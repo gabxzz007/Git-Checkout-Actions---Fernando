@@ -3,8 +3,13 @@ name: Criar Release e Pacote ZIP
 on:
   push:
     tags:
-      - 'v*' # Dispara ao criar tags no formato v1.0.0, v1.0.1, etc.
-  workflow_dispatch: # Permite disparo manual na aba Actions
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Nome da tag da versão (ex: v1.0.0)'
+        required: true
+        default: 'v1.0.0'
 
 permissions:
   contents: write
@@ -16,15 +21,24 @@ jobs:
       - name: Checkout do repositório
         uses: actions/checkout@v4
 
+      - name: Definir tag de versão
+        id: vars
+        run: |
+          if [ -n "${{ inputs.tag_name }}" ]; then
+            echo "version=${{ inputs.tag_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          fi
+
       - name: Gerar pacote ZIP do projeto
         run: |
-          VERSION="${{ github.ref_name }}"
-          # O comando git archive cria um ZIP limpo (sem pasta .git oculta)
+          VERSION="${{ steps.vars.outputs.version }}"
           git archive --format=zip --output="pacote-${VERSION}.zip" HEAD
 
       - name: Publicar Release no GitHub
         uses: softprops/action-gh-release@v2
         with:
-          name: "Versão ${{ github.ref_name }}"
-          files: "pacote-${{ github.ref_name }}.zip"
+          tag_name: ${{ steps.vars.outputs.version }}
+          name: "Versão ${{ steps.vars.outputs.version }}"
+          files: "pacote-${{ steps.vars.outputs.version }}.zip"
           generate_release_notes: true
