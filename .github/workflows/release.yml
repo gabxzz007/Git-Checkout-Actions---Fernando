@@ -1,0 +1,30 @@
+name: Criar Release e Pacote ZIP
+
+on:
+  push:
+    tags:
+      - 'v*' # Dispara ao criar tags no formato v1.0.0, v1.0.1, etc.
+  workflow_dispatch: # Permite disparo manual na aba Actions
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+
+      - name: Gerar pacote ZIP do projeto
+        run: |
+          VERSION="${{ github.ref_name }}"
+          # O comando git archive cria um ZIP limpo (sem pasta .git oculta)
+          git archive --format=zip --output="pacote-${VERSION}.zip" HEAD
+
+      - name: Publicar Release no GitHub
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Versão ${{ github.ref_name }}"
+          files: "pacote-${{ github.ref_name }}.zip"
+          generate_release_notes: true
